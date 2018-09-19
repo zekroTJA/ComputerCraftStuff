@@ -22,24 +22,22 @@
 ---------------------------------- CONSTS ----------------------------------
 SIDES       = {"top", "bottom", "front", "back", "left", "right"}
 CONFIG_FILE = "server.config"
-VERSION     = "S2.0.1"
+VERSION     = "S2.1.0"
 ----------------------------------------------------------------------------
 
-statusMap = {[1] = false}
+STATUS = {
+    [0]   = {"DOWN", colors.red},
+    [1]   = {" UP ", colors.green},
+    [2]   = {"OFFL", colors.purple},
+}
+
+statusMap = {}
 tileLocations = {}
 sizeX, sizeY = term.getSize()
 
 function fatal(error) 
     print("[ERROR] ", error)
     exit()
-end
-
-function tablelength(T)
-    local count = 0
-    for _ in pairs(T) do 
-        count = count + 1 
-    end
-    return count
 end
 
 function mountModem() 
@@ -83,17 +81,13 @@ function itoa(i)
 end
 
 function status(id)
-    return statusMap[id] == true
+    return statusMap[id]
 end
 
 function printStatus(id)
-    local _status = "[DOWN]"
-    local _color = colors.red
-    if status(id) then
-        _status = "[ UP ]"
-        _color = colors.green
-    end
-    drawTile(_status, _color, colors.black)
+    local _status = STATUS[status(id)][1]
+    local _color  = STATUS[status(id)][2]
+    drawTile("[" .. _status .. "]", _color, colors.black)
 end
 
 function printTitle()
@@ -126,6 +120,11 @@ function printGUI(config)
     end
 end
 
+function swap(n) 
+    if n == 1 then return 0 end
+    return 1
+end
+
 ----------------------------------- MAIN -----------------------------------
 
 shell.run("clear")
@@ -145,11 +144,12 @@ if config == nil then
     return
 end
 
-for i = 1, tablelength(config), 1 do
+for k, v in pairs(config) do
+    statusMap[k] = 2
     local id, status = rednet.receive(10)
     if id ~= nil then
         statusMap[id] = status
-        print("Received status of " .. id)
+        print("Received status of " .. id .. ": " .. status)
     else
         print("Timed out.")
     end
@@ -161,7 +161,7 @@ while true do
     if event == "monitor_touch" then
         local id = tileLocations[y]
         if id ~= nil then
-            local _status = not statusMap[id]
+            local _status = swap(statusMap[id])
             statusMap[id] = _status
             rednet.send(id, _status)
         end
