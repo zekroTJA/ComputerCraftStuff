@@ -22,7 +22,7 @@
 ---------------------------------- CONSTS ----------------------------------
 SIDES      = {"top", "bottom", "front", "back", "left", "right"}
 STATUSFILE = "status.dat"
-VERSION    = "C2.0.1"
+VERSION    = "C2.1.0"
 ----------------------------------------------------------------------------
 
 function fatal(error) 
@@ -55,9 +55,16 @@ function readFile(filename)
     return nil
 end
 
+function tobool(n)
+    return n == 1
+end
+
 ----------------------------------- MAIN -----------------------------------
 
 local rsout, serverid = ...
+
+-- print(rand())
+-- exit()
 
 if rsout == nil then
     fatal("No redstone output side defined as start argument.")
@@ -85,11 +92,11 @@ end
 status = readFile(STATUSFILE)
 
 if status == nil then
-    status = false
+    status = 0
 end
 
 print("Set saved status: " .. tostring(status))
-redstone.setOutput(rsout, status)
+redstone.setOutput(rsout, tobool(status))
 
 print("Waiting for 3 seconds...")
 os.sleep(3)
@@ -102,7 +109,7 @@ while true do
     id, message = rednet.receive()
     if id == serverid then
         print("[ SERVER ] " .. tostring(message))
-        redstone.setOutput(rsout, message)
+        redstone.setOutput(rsout, tobool(message))
         writeFile(STATUSFILE, message)
     end
 end
