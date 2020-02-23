@@ -1,18 +1,18 @@
 --[[
 MIT LICENCE
-
+ 
 Copyright (c) 2020 zekro Development
-
+ 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
+ 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-
+ 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,12 +21,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 --]]
-
--- PASTEBIN: UHsCxFk7
-
+ 
 -----------------------------------------------------------------
 -- CONFIGURABLE VALUES
 -----------------------------------------------------------------
+-- UPDATEINFO defines if update information
+-- should be displayed on each startup when
+-- a new version of this program is released.
+    local UPDATEINFO = true
 -- DELAY is the ammount of seconds which are
 -- waited until the next block in front of or
 -- above the turtle will be detected to dig
@@ -34,7 +36,7 @@ SOFTWARE.
 -- 0.4s is the minimum which should be set. If
 -- you notice problems digging gravel or sand,
 -- you should crank this up a bit.
-local DELAY  = 0.4
+    local DELAY  = 0.4
 -- DEPTH is the length of the corridor arms
 -- which are digged left and right of the mine
 -- shaft.
@@ -47,40 +49,41 @@ local DELAY  = 0.4
 -- 1 or less inventory fields are free.
     local SPACES = 1
 -----------------------------------------------------------------
-
-local VERSION = '4.0.0-ccv1.6'
+ 
+local VERSION = '4.1.0-ccv1.6'
+local PBCODE = 'UHsCxFk7'
 local ARG, ARG2, ARG3 = ...
-
+ 
 local PROGNAME = shell.getRunningProgram()
 local HELP = 'Usage: ' .. PROGNAME .. ' LEN [STORE]\n\
 LEN is the length of the mining shaft\
 in corridors, so the total length is\
 LEN * 3 blocks.\n\
 STORE is the type of storage used:\
-  - 0: no storage (default)\
-  - 1: double/single chest'
-
+- 0: no storage (default)\
+- 1: double/single chest'
+ 
 local VERSIONTXT = 'stripmining v.' .. VERSION .. '\
 Compatible with ComputerCraft >= 1.6.\n\
 (c) 2020 zekro Development\
 Covered by the MIT Licence.'
-
+ 
 ----------------------------------------------------------------
--- HELPER FUNCTIONS 
+-- HELPER FUNCTIONS
 ----------------------------------------------------------------
-
+ 
 -- Output help message and exit program
 -- with error().
 function printHelp(extended)
     print(HELP)
     error()
 end
-
+ 
 -- Clear screen.
 function cls()
     shell.run('clear')
 end
-
+ 
 -- Returns the number of the first slot
 -- of the turtles inventory which is not
 -- empty. If all slots are empty, 0 will
@@ -93,7 +96,7 @@ function firstInvNotEmpty()
     end
     return 0
 end
-
+ 
 -- Returns the ammount of inventory fields
 -- that are empty.
 function emptyInvFields()
@@ -101,11 +104,11 @@ function emptyInvFields()
     for i = 1, 16, 1 do
         if turtle.getItemCount(i) == 0 then
             empty = empty + 1
-        end 
+        end
     end
     return empty
 end
-
+ 
 -- Blocks until a key was pressed and then
 -- returns the name of the pressed key.
 function pullKeyEvent(txt)
@@ -115,11 +118,58 @@ function pullKeyEvent(txt)
     local _, key, _ = os.pullEvent("key")
     return keys.getName(key)
 end
-
+ 
+-- Refuels the turtle with all valid fuel
+-- items ignoring slot 1 and 2.
+function refuel()
+    for i = 3, 16, 1 do
+        turtle.select(i)
+        if turtle.refuel(0) then
+            turtle.refuel(64)
+        end
+    end
+end
+ 
+-- Looks for the verson in the passed
+-- pastebin post and compares it with the
+-- version passed of the current file.
+-- If they differ, an update information
+-- will be printed and true will be returned.
+function checkVersion(version, pbCode, silent)
+    local CHECK = 'local VERSION = \''
+ 
+    local res = http.get('https://pastebin.com/raw/' .. pbCode)
+    if not res or res.getResponseCode() ~= 200 then
+        return nil
+    end
+ 
+    local line = ''
+    local vindex = nil
+ 
+    while line do
+        line = res.readLine()
+        vindex = string.find(line, 'local VERSION = \'', 1, true)
+        if vindex then
+            break
+        end
+    end
+ 
+    res.close()
+ 
+    local latestVersion = string.sub(line, vindex + string.len(CHECK), -2)
+    local isOutdated = latestVersion ~= version
+    if isOutdated and silent ~= true then
+        print('New version available!')
+        print('Do: pastebin get ' .. pbCode .. ' ' .. shell.getRunningProgram())
+    end
+ 
+    return isOutdated
+end
+ 
 ----------------------------------------------------------------
 -- TURTLE SHORTCUTS
 ----------------------------------------------------------------
-
+ 
 -- Executes the passed function, which
 -- returns true on success, n times and
 -- retries the function if it fails after
@@ -127,48 +177,48 @@ end
 function _do(n, f)
     n = n and n or 1
     for i = 1, n, 1 do
-        while not f() do 
+        while not f() do
             sleep(0.1)
         end
     end
 end
-
--- Tries to move the turthe forward
+ 
+-- Tries to move the turtle forward
 -- n times.
 function goForward(n)
     _do(n, turtle.forward)
 end
-
--- Tries to move the turthe back
+ 
+-- Tries to move the turtle back
 -- n times.
 function goBack(n)
     _do(n, turtle.back)
 end
-
--- Tries to move the turthe up
+ 
+-- Tries to move the turtle up
 -- n times.
 function goUp(n)
     _do(n, turtle.up)
 end
-
--- Tries to move the turthe down
+ 
+-- Tries to move the turtle down
 -- n times.
 function goDown(n)
     _do(n, turtle.down)
 end
-
+ 
 -- Tries to turn the turtle n times
 -- to the right.
 function turnRight(n)
     _do(n, turtle.turnRight)
 end
-
+ 
 -- Tries to turn the turtle n times
 -- to the left.
 function turnLeft(n)
     _do(n, turtle.turnLeft)
 end
-
+ 
 -- Drops the whole inventory except the
 -- items in the first slot. Also, at least
 -- 5 blocks for filling ground are kept in
@@ -184,11 +234,11 @@ function emptyInv()
     end
     turtle.select(1)
 end
-
+ 
 ----------------------------------------------------------------
 -- PROGRAM STRUCTURE FUNCTIONS
 ----------------------------------------------------------------
-
+ 
 -- Checks if the turtle has a label set and
 -- warns the user if the turtle has no label set.
 function checkLabel()
@@ -203,37 +253,41 @@ function checkLabel()
         end
     end
 end
-
+ 
 -- Checks if the turtle has estimated enought
 -- fuel to fulfil the mining process and refuels
 -- the turtle on user input of fuel into the
 -- inventory.
 function checkFuel(len)
     cls()
-    local fuelRequired = len * 30
+    -- 27.375 is the calculated value for
+    -- one corridor multiplied by an estimated
+    -- variation factor of 5%.
+    local fuelRequired = len * 27.375 * 1.05
     local fuelExistent = turtle.getFuelLevel()
     local fuelDelta = fuelRequired - fuelExistent
     if fuelExistent < fuelRequired then
         print('Not enough fuel to fulfil the process. Please refuel:\n\n' ..
               ' - ' .. fuelDelta / 80 .. ' coal\n' ..
               ' - ' .. fuelDelta / 15 .. ' wooden plancks\n\n' ..
+              ' - ' .. fuelDelta / 1000 .. ' lava buckets\n\n' ..
               'Just put the fuel to be refueld somewhere in the turtles inventory.')
-        while firstInvNotEmpty() == 0 do
+        while firstInvNotEmpty() < 3 do
             sleep(0.5)
         end
-        shell.run('refuel all')
+        refuel()
         return false
     end
     return true
 end
-
+ 
 -- Displays fuel level and shows information to
 -- prepare the inventory of the turtle for
 -- the mining process.
 function checkRequirements(len, store)
     cls()
     write('Fuel level is ' .. turtle.getFuelLevel() .. '.\n\n' ..
-          'Please put ' .. len .. ' in slot 1')
+          'Please put ' .. len .. ' torches in slot 1')
     if store > 0 then
         write(' and one or two chests in slot 2')
     end
@@ -244,12 +298,12 @@ function checkRequirements(len, store)
         error()
     end
 end
-
+ 
 -- Digs and moves forward by digging 1x2x1
 -- blocks with checking for falling blocks
 -- (like sand or gravel) and missing ground
 -- blocks which will be filled.
-function digForward(n)
+function digForward(n, onlyBottom)
     n = n and n or 1
     for i = 1, n, 1 do
         while turtle.detect() do
@@ -257,18 +311,22 @@ function digForward(n)
             sleep(DELAY)
         end
         goForward()
-        sleep(DELAY)
-        while turtle.detectUp() do
-            turtle.digUp()
+ 
+        if onlyBottom ~= true then
             sleep(DELAY)
+            while turtle.detectUp() do
+                turtle.digUp()
+                sleep(DELAY)
+            end
         end
+ 
         if not turtle.detectDown() then
             turtle.select(2)
             turtle.placeDown()
         end
     end
 end
-
+ 
 -- Digs the base for one or two chests,
 -- depending on passed chest count.
 -- If storage type is > 0 and 0 chests
@@ -288,7 +346,7 @@ function makeBase(store, chests)
         turnRight()
         digForward()
         goBack()
-        if place then 
+        if place then
             turtle.select(2)
             turtle.place()
             turtle.select(1)
@@ -296,70 +354,83 @@ function makeBase(store, chests)
         turnLeft()
     end
 end
-
+ 
 -- One instance of digging one corridor
 -- pair with or without placing a torch,
 -- depending on the passed value.
-function digCorridorPart(placeTorch)
-    digForward(2)
-    if placeTorch then
+function digCorridorPart(torches)
+    digForward(3)
+    if torches > 0 then
+        goBack()
         turtle.select(1)
         turtle.placeUp()
+        digForward()
     end
-    digForward()
     turnRight()
     digForward(DEPTH)
     turnRight(2)
     digForward(DEPTH * 2)
-    goBack(DEPTH)
-    turnRight()
+    turnRight(2)
+    digForward(DEPTH)
+    turnLeft()
 end
-
+ 
 ----------------------------------------------------------------
 -- MAIN ROUTINE
 ----------------------------------------------------------------
-
+ 
 if ARG == 'v' or ARG == 'version' then
-    print(VERSIONTXT)
+    print(VERSIONTXT .. '\n')
+    checkVersion(VERSION, PBCODE)
     error()
 end
-
+ 
 local len = tonumber(ARG)
 local store = tonumber(ARG2)
 store = store and store or 0
-
+ 
 if not len or len < 1 then
     printHelp()
 end
-
+ 
 if store and (store < 0 or store > 1) then
     printHelp()
 end
-
+ 
 checkLabel()
-
+ 
+if checkVersion(VERSION, PBCODE) and UPDATEINFO then
+    pullKeyEvent('\nPress any butto nto continue...')
+    print("\n")
+end
+ 
 while not checkFuel(len) do end
-
+ 
 checkRequirements(len, store)
-
-local torches = turtle.getItemCount(1) > 0
+ 
+local torches = turtle.getItemCount(1)
 local chests = turtle.getItemCount(2)
-
+ 
+turtle.select(1)
+ 
 if store > 0 then
     makeBase(store, chests)
 end
-
+ 
 local way = 0
 for i = 1, len, 1 do
     digCorridorPart(torches)
-    way =  way + 3
+    torches = torches - 1
+    way = way + 3
     if store > 0 and emptyInvFields() <= SPACES then
-        goBack(way)
-        turnRight()
+        turnRight(2)
+        digForward(way, true)
+        turnLeft()
         emptyInv()
         turnLeft()
         goForward(way)
     end
 end
-
-goBack(way)
+ 
+turnRight(2)
+digForward(way, true)
