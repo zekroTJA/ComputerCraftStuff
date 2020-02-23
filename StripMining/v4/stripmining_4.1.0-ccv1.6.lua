@@ -148,7 +148,7 @@ function checkVersion(version, pbCode, silent)
  
     while line do
         line = res.readLine()
-        vindex = string.find(line, 'local VERSION = \'', 1, true)
+        vindex = string.find(line, CHECK, 1, true)
         if vindex then
             break
         end
