@@ -46,6 +46,7 @@ currently implemented commands:
 ]]
 
 local REDNET_SIDE = "left"
+local CHECK_TIMEOUT = 60
 
 ----------------------------------------------------
 
@@ -100,7 +101,7 @@ end
 function bcloop()
     -- sleep(5)
     broadcast()
-    receivejob(5)
+    receivejob(CHECK_TIMEOUT)
 end
 
 clear()
