@@ -1,3 +1,4 @@
+local REDNET_SIDE = "bottom"
 local ORDER_SIGNAL_SIDE = "back"
 
 ----------------------------------------------------
@@ -9,14 +10,8 @@ local function clear()
 end
 
 local function open()
-    for _, v in pairs(redstone.getSides()) do
-        if pcall(rednet.open, v) then
-            rednetSide = v
-            return
-        end
-    end
-    print("ERR: Could not detect any wireless modem.")
-    exit()
+    rednet.open(REDNET_SIDE)
+    rednetSide = REDNET_SIDE
 end
 
 local function close()
