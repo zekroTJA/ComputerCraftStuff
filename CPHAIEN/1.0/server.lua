@@ -1,12 +1,12 @@
 --[[
 
-© 2020 Ringo Hofmmann (zekro Development)
+Â© 2020 Ringo Hofmmann (zekro Development)
 
-CPHAIEN STORAGE SYSTEM - SERVER
+CPHAIEN STORAGE SYSTEM - ORDER PANEL
 
 ---------
 
-CPHAIEN PROTOCOL V1.0
+CPHAIEN PROTOCOL V1.1
 
 The CPHAIEN protocol is a simple protocol which is utilized for
 communication between the CLIENT pc's, SERVER pc and the CHECKER
@@ -21,7 +21,7 @@ currently implemented commands:
 
 "order" / 1
 
-    Issues an ORDER to a CLIENT.
+Issues an ORDER to a CLIENT.
     Takes one argument named "n", which specifies the ammount 
     of ordered entities (type number).
     An order request MUST be answered by an acknowledgement
@@ -45,27 +45,20 @@ currently implemented commands:
 
 ]]
 
-local REDNET_SIDE = "right"
-
-local ID_OFFSET = 6
-
 local ID_TABLE = {
-    ["cobblestone"]     = 1,
-    ["stone"]           = 2,
-    ["sand"]            = 3,
-    ["dirt"]            = 4,
-    ["gravel"]          = 5,
-    ["marble"]          = 6,
+    ["cobblestone"] = 2,
 }
 
 ----------------------------------------------------
 
-function clear()
+local rednetSide = nil
+
+local function clear()
     shell.run("clear")
 end
 
-function findByName(name)
-    local i, n, id = 999, nil, nil
+local function findByName(name)
+    local i, n, id = 999999, nil, nil
     for k, v in pairs(ID_TABLE) do
         local s = string.find(k, name)
         if s and s < i then
@@ -74,31 +67,35 @@ function findByName(name)
             id = v
         end
     end
-    return n, id + ID_OFFSET
+    return n, id
 end
 
-function open()
-    if not rednet.isOpen(REDNET_SIDE) then
-        rednet.open(REDNET_SIDE)
+local function open()
+    for _, v in pairs(redstone.getSides()) do
+        if pcall(rednet.open, v) then
+            rednetSide = v
+            return
+        end
     end
+    print("ERR: Could not detect any wireless modem.")
+    exit()
 end
 
-function close()
-    if rednet.isOpen(REDNET_SIDE) then
-        rednet.close(REDNET_SIDE)
-    end
+local function close()
+    rednet.close(rednetSide)
 end
 
-function send(receiver, n)
+local function send(receiver, n)
     open()
-    local data = textutils.serialize({
+    local cmd = {
         ["cmd"] = "order",
         ["n"] = n,
-    })
+    }
+    local data = textutils.serialize(cmd)
     return rednet.send(receiver, data)
 end
 
-function receive(timeout)
+local function receive(timeout)
     open()
     local peer, data = rednet.receive(timeout)
     if not peer then
@@ -108,7 +105,7 @@ function receive(timeout)
     return peer, msg
 end
 
-function receiveAck(receiver)
+local function receiveAck(receiver)
     open()
     local id, msg = receive(5)
     if not id then
@@ -125,7 +122,7 @@ end
 
 ----------------------------------------------------
 
-function mainloop()
+local function mainloop()
     clear()
     print("Enter the item to be ordered:")
     local input = read()
@@ -166,6 +163,7 @@ function mainloop()
     sleep(3)
 end
 
+open()
 while not mainloop() do end
 
 close()
