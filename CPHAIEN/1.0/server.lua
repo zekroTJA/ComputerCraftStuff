@@ -1,6 +1,6 @@
 --[[
 
-Â© 2020 Ringo Hofmmann (zekro Development)
+© 2020 Ringo Hofmmann (zekro Development)
 
 CPHAIEN STORAGE SYSTEM - ORDER PANEL
 
@@ -45,6 +45,8 @@ Issues an ORDER to a CLIENT.
 
 ]]
 
+local REDNET_SIDE = "top"
+
 local ID_TABLE = {
     ["cobblestone"] = 2,
 }
@@ -71,14 +73,8 @@ local function findByName(name)
 end
 
 local function open()
-    for _, v in pairs(redstone.getSides()) do
-        if pcall(rednet.open, v) then
-            rednetSide = v
-            return
-        end
-    end
-    print("ERR: Could not detect any wireless modem.")
-    exit()
+    rednet.open(REDNET_SIDE)
+    rednetSide = REDNET_SIDE
 end
 
 local function close()
