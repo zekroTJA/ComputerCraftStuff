@@ -1,5 +1,5 @@
 local REDNET_SIDE = "top"
-local CHECK_TIMEOUT = 5
+local CHECK_TIMEOUT = 60
 
 local ID_TABLE = {
     [2] = 69,
