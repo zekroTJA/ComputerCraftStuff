@@ -57,7 +57,7 @@ end
 function loadTabFile(filename)
     file = fs.open(filename, "r")
     if file ~= nil then
-        table = textutils.unserialize(file.readLine())
+        table = textutils.unserialize(file.readAll())
         file.close()
     else
         defaultTable = {
