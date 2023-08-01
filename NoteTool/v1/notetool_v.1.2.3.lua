@@ -151,7 +151,7 @@ while true do
         
         for i=1,1000,1 do
             if notes[i] == nil then
-                print("Ad to: ",i)
+                print("Add to: ",i)
                 input = io.read()
                 if (string.len(input) <= (monSize().w)-4) then
                     notes[i] = input
