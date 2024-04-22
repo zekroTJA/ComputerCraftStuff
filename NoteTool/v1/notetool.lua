@@ -1,4 +1,4 @@
--- NOTE TOOL V.1.3
+-- NOTE TOOL V.1.3.1
 -- FOR MINECRAFT COMPUTER CRAFT
 -- (C) zekro 2016
 
@@ -10,6 +10,7 @@
 ------------------------------------------------------
 local noteFileName = "notes"
 local colorTitle = colors.red
+local colorTitleBackground = colors.gray
 local colorSelectLine = colors.pink
 local colorPageButtons = colors.pink
 local colorAddButton = colors.red
@@ -81,10 +82,10 @@ end
 
 local function printEmptyLine(w)
     local line = ""
-    for j = 1, w do
+    for _ = 1, w do
         line = line .. " "
     end
-    print(line)
+    write(line)
 end
 
 -- render main gui
@@ -95,9 +96,13 @@ local function renderGui(page)
 
     cls()
 
-    term.setCursorPos(size.w / 2 - 6, 1)
+    term.setBackgroundColor(colorTitleBackground)
+    term.setCursorPos(1, 1)
+    printEmptyLine(size.w)
     term.setBackgroundColor(colorTitle)
-    print("NOTES - Page ", page, "/", maxPage)
+    local title = " NOTES - Page " .. page .. "/" .. maxPage .. " "
+    term.setCursorPos(size.w / 2 - #title / 2, 1)
+    print(title)
 
     term.setBackgroundColor(colors.black)
 
@@ -114,6 +119,10 @@ local function renderGui(page)
             print(i, "-", notes[i])
         end
     end
+
+    term.setCursorPos(1, size.h)
+    term.setBackgroundColor(colorTitleBackground)
+    printEmptyLine(size.w)
 
     term.setBackgroundColor(colorAddButton)
     term.setCursorPos(size.w / 2 - 3, size.h)
@@ -159,6 +168,10 @@ while true do
         print("Add note:")
 
         local input = io.read()
+        if #input == 0 then
+            goto continue
+        end
+
         if (string.len(input) <= size.w - 4) then
             table.insert(notes, input)
         else
