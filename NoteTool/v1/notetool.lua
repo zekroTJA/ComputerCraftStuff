@@ -1,4 +1,4 @@
--- NOTE TOOL V.1.2.3
+-- NOTE TOOL V.1.3
 -- FOR MINECRAFT COMPUTER CRAFT
 -- (C) zekro 2016
 
@@ -8,40 +8,36 @@
 ------------------------------------------------------
 ---------------  C U S T O M  V A R S  ---------------
 ------------------------------------------------------
-local noteFileName = "notes" -- default: "notes"
-local colorTitle = 8192      -- default: 8192
-local colorPageButtons = 128 -- default:  128
-local colorAddButton = 8192  -- default: 8192
+local noteFileName = "notes"
+local colorTitle = colors.red
+local colorSelectLine = colors.pink
+local colorPageButtons = colors.pink
+local colorAddButton = colors.red
 ------------------------------------------------------
 -- For a color table use this:
--- http://computercraft.info/wiki/Colors_(API)
+-- https://tweaked.cc/module/colors.html
 ------------------------------------------------------
 
 
 local notes = {}
+local selected = nil
 
 -- test if a monitor is "pluged in"
 local function testForMonitor()
-    for k in pairs(rs.getSides()) do
-        if peripheral.isPresent(rs.getSides()[k]) == true then
-            break
-        else
-            if k == 6 then
-                print("Please start this program on a monitor!")
-                print("\nUse 'monitor <side> <program name>' or put this in your startup:")
-                print("\nshell.run(''monitor <side> <program name>'')")
-                error()
-            end
-        end
+    if not peripheral.find("monitor") then
+        print("Please start this program on a monitor!")
+        print("\nUse 'monitor <side> <program name>' or put this in your startup:")
+        print("\nshell.run(''monitor <side> <program name>'')")
+        error()
     end
 end
 
 -- get monitor size: width = monSize().w ; height = monSize().h
 local function monSize()
-    for i, v in ipairs(rs.getSides()) do
+    for _, v in ipairs(rs.getSides()) do
         if peripheral.isPresent(v) == true then
-            monitor = peripheral.wrap(v)
-            w, h = monitor.getSize()
+            local monitor = peripheral.wrap(v)
+            local w, h = monitor.getSize()
             return { ["w"] = w, ["h"] = h }
         end
     end
@@ -56,8 +52,9 @@ end
 -- load notes file or if it not exists, create a file with default values
 local function loadTabFile(filename)
     local file = fs.open(filename, "r")
+    local t = nil
     if file ~= nil then
-        table = textutils.unserialize(file.readAll())
+        t = textutils.unserialize(file.readAll())
         file.close()
     else
         local defaultTable = {
@@ -70,9 +67,9 @@ local function loadTabFile(filename)
         file = fs.open(filename, "w")
         file.write(textutils.serialize(defaultTable))
         file.close()
-        table = defaultTable
+        t = defaultTable
     end
-    return table
+    return t
 end
 
 -- save the table from memory
@@ -82,40 +79,58 @@ local function saveTabFile(filename, input)
     file.close()
 end
 
+local function printEmptyLine(w)
+    local line = ""
+    for j = 1, w do
+        line = line .. " "
+    end
+    print(line)
+end
+
 -- render main gui
 local function renderGui(page)
+    local size = monSize()
+    local maxItems = size.h - 2
+    local maxPage = math.floor(#notes / maxItems) + 1
+
     cls()
 
-    term.setCursorPos((monSize().w) / 2 - 6, 1)
+    term.setCursorPos(size.w / 2 - 6, 1)
     term.setBackgroundColor(colorTitle)
-    print("NOTES - Page ", pageNumb)
+    print("NOTES - Page ", page, "/", maxPage)
 
     term.setBackgroundColor(colors.black)
-    local count2 = 0
-    for k in pairs(notes) do
-        count2 = count2 + 1
-        if count2 >= (page - 1) * ((monSize().h) - 2) then
-            print(count2, " - ", notes[k])
-        end
 
-        if count2 == (page) * ((monSize().h) - 3) then
-            break
+    for i = (page - 1) * maxItems + 1, math.min(page * maxItems, #notes) do
+        if selected == i then
+            term.setBackgroundColor(colorSelectLine)
+            printEmptyLine(size.w)
+            term.setCursorPos(1, i + 1)
+            print(i, "-", notes[i])
+            term.setCursorPos(size.w - 8, i + 1)
+            print(" | ^ v X")
+            term.setBackgroundColor(colors.black)
+        else
+            print(i, "-", notes[i])
         end
     end
 
     term.setBackgroundColor(colorAddButton)
-    term.setCursorPos((monSize().w) / 2 - 3, (monSize().h))
+    term.setCursorPos(size.w / 2 - 3, size.h)
     write("[ ADD ]")
 
-    term.setBackgroundColor(colorPageButtons)
-    term.setCursorPos((monSize().w) - 4, (monSize().h))
-    write("[ > ]")
+    if page < maxPage then
+        term.setBackgroundColor(colorPageButtons)
+        term.setCursorPos(size.w - 4, size.h)
+        write("[ > ]")
+    end
 
-    term.setBackgroundColor(colorPageButtons)
-    term.setCursorPos(1, (monSize().h))
-    write("[ < ]")
+    if page > 1 then
+        term.setBackgroundColor(colorPageButtons)
+        term.setCursorPos(1, size.h)
+        write("[ < ]")
+    end
 end
-
 
 
 --------------------------------------------------------
@@ -127,55 +142,70 @@ testForMonitor()
 notes = loadTabFile(noteFileName)
 local pageNumb = 1
 
-renderGui(pageNumb)
 while true do
-    local event, side, x, y = os.pullEvent()
+    renderGui(pageNumb)
+    saveTabFile(noteFileName, notes)
+
+    local event, _, x, y = os.pullEvent()
+    local size = monSize()
+
+    if event ~= "monitor_touch" then
+        goto continue
+    end
 
     -- TOUCH EVENT: ADD
-    if (event == "monitor_touch") and (x >= ((monSize().w) / 2 - 3)) and (x <= ((monSize().w) / 2 + 7)) and (y == (monSize().h)) then
+    if (x >= (size.w / 2 - 3)) and (x <= (size.w / 2 + 3)) and (y == size.h) then
         cls()
         print("Add note:")
 
-        for i = 1, 1000, 1 do
-            if notes[i] == nil then
-                print("Add to: ", i)
-                local input = io.read()
-                if (string.len(input) <= (monSize().w) - 4) then
-                    notes[i] = input
-                else
-                    print("\n Too much chars. Please only use ", ((monSize().w) - 4), " chars or change display width.")
-                    _ = io.read()
-                end
-                break
-            end
+        local input = io.read()
+        if (string.len(input) <= size.w - 4) then
+            table.insert(notes, input)
+        else
+            print("\n Too much chars. Please only use ", (size.w - 4), " chars or change display width.")
+            _ = io.read()
         end
-    end
 
-    -- TOUCH EVENT: DELETE
-    if (event == "monitor_touch") and (x >= 1) and (x <= monSize().w) and (y >= 2) and (y <= (monSize().h) - 3) then
-        cls()
-        local count1 = 0
-        for k in pairs(notes) do
-            count1 = count1 + 1
-            if count1 == ((y - 1) + (pageNumb - 1) * (monSize().h - 3)) then
-                notes[k] = nil
-                break
-            end
-        end
+        goto continue
     end
 
     -- TOUCH EVENT: PAGE UP
-    if (event == "monitor_touch") and (x >= (((monSize().w) - 4)) and (x <= (monSize().w))) and (y == (monSize().h)) then
+    if (x >= ((size.w - 4)) and (x <= size.w)) and (y == size.h) then
         pageNumb = pageNumb + 1
+        goto continue
     end
 
     -- TOUCH EVENT: PAGE DOWN
-    if (event == "monitor_touch") and (x >= 0) and (x <= 4) and (y == (monSize().h)) then
+    if (x >= 0) and (x <= 4) and (y == size.h) then
         if pageNumb >= 2 then
             pageNumb = pageNumb - 1
         end
+        goto continue
     end
 
-    renderGui(pageNumb)
-    saveTabFile(noteFileName, notes)
+    if y > 1 and y < size.h then
+        local i = y - 1
+        if selected == i then
+            if x == size.w - 1 then
+                table.remove(notes, i)
+                selected = nil
+            elseif x == size.w - 3 then
+                if i < #notes then
+                    notes[i], notes[i + 1] = notes[i + 1], notes[i]
+                    selected = selected + 1
+                end
+            elseif x == size.w - 5 then
+                if i > 1 then
+                    notes[i], notes[i - 1] = notes[i - 1], notes[i]
+                    selected = selected - 1
+                end
+            else
+                selected = nil
+            end
+        else
+            selected = i
+        end
+    end
+
+    ::continue::
 end
