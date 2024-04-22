@@ -11,7 +11,7 @@
 local noteFileName = "notes"
 local colorTitle = colors.red
 local colorTitleBackground = colors.gray
-local colorSelectLine = colors.pink
+local colorSelectLine = { background = colors.pink, text = colors.gray, controls = colors.red }
 local colorPageButtons = colors.pink
 local colorAddButton = colors.red
 ------------------------------------------------------
@@ -39,7 +39,7 @@ local function monSize()
         if peripheral.isPresent(v) == true then
             local monitor = peripheral.wrap(v)
             local w, h = monitor.getSize()
-            return { ["w"] = w, ["h"] = h }
+            return { w = w, h = h }
         end
     end
 end
@@ -47,7 +47,8 @@ end
 -- clear screen
 local function cls()
     term.setBackgroundColor(colors.black)
-    shell.run("clear")
+    term.clear()
+    term.setCursorPos(1, 1)
 end
 
 -- load notes file or if it not exists, create a file with default values
@@ -108,13 +109,16 @@ local function renderGui(page)
 
     for i = (page - 1) * maxItems + 1, math.min(page * maxItems, #notes) do
         if selected == i then
-            term.setBackgroundColor(colorSelectLine)
+            term.setBackgroundColor(colorSelectLine.background)
+            term.setTextColor(colorSelectLine.text)
             printEmptyLine(size.w)
             term.setCursorPos(1, i + 1)
             print(i, "-", notes[i])
-            term.setCursorPos(size.w - 8, i + 1)
-            print(" | ^ v X")
+            term.setCursorPos(size.w - 6, i + 1)
+            term.setBackgroundColor(colorSelectLine.controls)
+            print(" ^ v X ")
             term.setBackgroundColor(colors.black)
+            term.setTextColor(colors.white)
         else
             print(i, "-", notes[i])
         end
