@@ -1,14 +1,11 @@
-local watchItems = {
-    ["mysticalagriculture:inferium_essence"] = "Inferium Essence",
-    ["mysticalagriculture:iron_essence"] = "Iron Essence",
-    ["mysticalagriculture:gold_essence"] = "Gold Essence",
-    ["mysticalagriculture:diamond_essence"] = "Diamond Essence",
-    ["mysticalagriculture:redstone_essence"] = "Redstone Essence",
-    ["mysticalagriculture:nether_quartz_essence"] = "Quartz Essence",
-    ["minecraft:birch_log"] = "Birch Log",
-    ["minecraft:birch_planks"] = "Birch Planks",
-}
+-- A simple application to display counts of items in an Refined Storage system.
 
+-- Config must contain the following variables
+-- watchItems: Table of type { ["<itemID>"] = "<displayName>" } containing the items to be listed
+-- title: A string which is dispalyed as title on the screen
+local config = require "config"
+
+term.setBackgroundColor(colors.black)
 term.clear()
 
 local bridge = peripheral.find("rsBridge")
@@ -41,9 +38,11 @@ end
 
 local function itemCounts()
     local counts = {}
-    for item, displayName in pairs(watchItems) do
+    for item, displayName in pairs(config.watchItems) do
         local props = bridge.getItem({ name = item })
-        counts[#counts + 1] = { name = displayName, count = props.amount }
+        if props then
+            counts[#counts + 1] = { name = displayName, count = props.amount }
+        end
     end
     table.sort(counts, function(a, b) return a.count > b.count end)
     return counts
@@ -56,13 +55,11 @@ local function render()
 
     term.setBackgroundColor(colors.red)
     write(string.rep(" ", width))
-    term.setCursorPos(width / 2 - 5, 1)
-    print("Storage Stock")
+    term.setCursorPos(width / 2 - #config.title / 2 + 1, 1)
+    print(config.title)
 
-    local i = 1
     for i, p in pairs(itemCounts()) do
         printCount(p.name, p.count, lineColors[i % 2 + 1])
-        i = i + 1
     end
 end
 
