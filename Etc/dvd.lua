@@ -28,36 +28,43 @@ local function addVec(pos, vec)
 end
 
 -- Draws the frame of the text given the position, vector and color.
--- Returns a new position of the text and vector which can be passed
--- to the next call of the function to fraw the next frame.
-local function draw(pos, vec, color)
+-- Also takes the amount of side and corner hits.
+-- Returns a new position of the text, vector, hits and corner hits count
+-- which can be passed to the next call of the function to fraw the next
+-- frame.
+local function draw(pos, vec, hits, cornerHits)
     local width, height = term.getSize()
 
     term.setCursorPos(pos.x, pos.y)
     term.setTextColor(colors.black)
     write(string.rep(" ", #text))
 
+    term.setCursorPos(1, 1)
+    term.setTextColor(colors.gray)
+    print("Corner Hits: " .. cornerHits)
+
+    local newHits = hits
     local newPos = addVec(pos, vec)
-    if newPos.x < 1 then
+    if newPos.x < 1 or newPos.x + #text - 1 > width then
         vec.x = vec.x * -1
+        newHits = newHits + 1
     end
-    if newPos.y < 1 then
+    if newPos.y < 1 or newPos.y > height then
         vec.y = vec.y * -1
+        newHits = newHits + 1
     end
-    if newPos.x + #text - 1 > width then
-        vec.x = vec.x * -1
-    end
-    if newPos.y > height then
-        vec.y = vec.y * -1
+
+    if newHits - hits == 2 then
+        cornerHits = cornerHits + 1
     end
 
     pos = addVec(pos, vec)
 
     term.setCursorPos(pos.x, pos.y)
-    term.setTextColor(color)
+    term.setTextColor(colorPalette[newHits % #colorPalette + 1])
     write(text)
 
-    return pos, vec
+    return pos, vec, newHits, cornerHits
 end
 
 -- Returns a random position in the displays bounding box.
@@ -92,16 +99,10 @@ term.clear()
 local pos = getRandomPos()
 local vec = getRandomVec()
 
-local frame = 1
+local hits = 0
+local cornerHits = 0
 
 while true do
-    pos, vec = draw(pos, vec, colorPalette[frame])
-
-    if frame % #colorPalette == 0 then
-        frame = 1
-    else
-        frame = frame + 1
-    end
-
+    pos, vec, hits, cornerHits = draw(pos, vec, hits, cornerHits)
     sleep(0.5 / speed)
 end
