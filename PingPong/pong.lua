@@ -50,7 +50,7 @@ local function addVec(a, b)
 end
 
 local function drawTitle()
-    local text = " PING PONG "
+    local text = " PONG "
     term.setCursorPos(width / 2 - #text / 2, 1)
     term.setBackgroundColor(colors.red)
     write(text)
